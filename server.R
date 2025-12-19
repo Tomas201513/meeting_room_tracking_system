@@ -120,6 +120,7 @@ server <- function(input, output, session) {
     
     # Calculate week start and end
     week_start <- current_date - as.integer(format(current_date, "%u")) + 1
+    
     week_end <- week_start + 6
     
     # Format: "December 15-21, 2025"
@@ -137,7 +138,11 @@ server <- function(input, output, session) {
       )
     }
     
-    div(class = "gcal-week-display", display_text)
+    div(
+      class = "gcal-week-display",
+      `data-week-start` = format(week_start, "%Y-%m-%d"),
+      display_text
+    )
   })
   
   # Get meetings formatted for calendar (Google Calendar-like blocks)
@@ -275,7 +280,6 @@ server <- function(input, output, session) {
   observeEvent(input$calendar_click, {
     event <- input$calendar_click
     if (is.null(event)) return()
-    
     
     # Check if weekend
     if (isTRUE(event$isWeekend)) {
@@ -450,6 +454,11 @@ server <- function(input, output, session) {
       meetings_trig(meetings_trig() + 1)
       removeModal()
       
+      # Navigate calendar to the booked meeting's date
+      meeting_date <- as.Date(date)
+      updateDateInput(session, "mini_calendar", value = meeting_date)
+      cal_proxy_date("booking_calendar", meeting_date)
+      
       if (room_hidden) {
         showNotification(
           "Meeting scheduled! Note: This room is currently hidden. Check its box in the sidebar to see the meeting.",
@@ -499,13 +508,21 @@ server <- function(input, output, session) {
     cal_proxy_today("booking_calendar")
   })
   
-  # Previous button
+  # Previous button - also update mini calendar
   observeEvent(input$btn_prev, {
+    current <- input$mini_calendar
+    if (is.null(current)) current <- Sys.Date()
+    new_date <- current - 7
+    updateDateInput(session, "mini_calendar", value = new_date)
     cal_proxy_prev("booking_calendar")
   })
   
-  # Next button
+  # Next button - also update mini calendar
   observeEvent(input$btn_next, {
+    current <- input$mini_calendar
+    if (is.null(current)) current <- Sys.Date()
+    new_date <- current + 7
+    updateDateInput(session, "mini_calendar", value = new_date)
     cal_proxy_next("booking_calendar")
   })
   

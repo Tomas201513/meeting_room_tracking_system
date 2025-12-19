@@ -8,6 +8,9 @@ source("global.R")
 source("ui.R")
 source("server.R")
 
+# Add www folder as resource path for static files
+shiny::addResourcePath("www", file.path(getwd(), "www"))
+
 # Run the app with authentication wrapper
 shinyApp(
   ui = secure_app(ui),
