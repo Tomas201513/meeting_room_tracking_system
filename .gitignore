@@ -1,0 +1,49 @@
+# ===== R Session Files =====
+.Rhistory
+.Rdata
+.RData
+.Ruserdata
+*.Rproj.user/
+
+# ===== Database Files =====
+# SQLite databases contain local/user data
+*.db
+
+# ===== Environment & Secrets =====
+.env
+.env.local
+.env.production
+.Renviron
+
+# ===== IDE & Editor =====
+.cursor/
+.vscode/
+*.Rproj.user/
+.idea/
+
+# ===== OS Generated =====
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# ===== Logs =====
+*.log
+logs/
+
+# ===== Package Management =====
+packrat/lib*/
+renv/library/
+renv/staging/
+renv/sandbox/
+
+# ===== Temporary Files =====
+*~
+*.swp
+*.swo
+*.tmp
+
