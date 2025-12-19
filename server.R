@@ -157,22 +157,47 @@ server <- function(input, output, session) {
       format(dt, "%Y-%m-%dT%H:%M:%S")
     }
     
+    # Build display title: "Subject | Organizer" or fallback
+    build_title <- function(subject, organizer) {
+      subj <- if (is.na(subject) || subject == "") NULL else subject
+      org <- if (is.na(organizer) || organizer == "") NULL else organizer
+      
+      if (!is.null(subj) && !is.null(org)) {
+        paste0(subj, "\n👤 ", org)
+      } else if (!is.null(subj)) {
+        subj
+      } else if (!is.null(org)) {
+        paste0("👤 ", org)
+      } else {
+        "Meeting"
+      }
+    }
+    
     # Create schedule data for toastui with proper time blocks
     data.frame(
       id = as.character(meetings$id),
       calendarId = as.character(meetings$room_id),
-      title = ifelse(is.na(meetings$meeting_purpose) | meetings$meeting_purpose == "",
-                     meetings$room_name, meetings$meeting_purpose),
+      title = mapply(build_title, meetings$meeting_purpose, meetings$organiser, USE.NAMES = FALSE),
       body = paste0(
-        "<strong>Organizer:</strong> ", 
+        "<div style='padding: 8px;'>",
+        "<div style='font-size: 14px; font-weight: 600; margin-bottom: 8px;'>",
+        ifelse(is.na(meetings$meeting_purpose) | meetings$meeting_purpose == "", "Meeting", meetings$meeting_purpose),
+        "</div>",
+        "<div style='font-size: 13px; color: #5f6368; margin-bottom: 4px;'>",
+        "<span style='margin-right: 6px;'>👤</span>",
         ifelse(is.na(meetings$organiser) | meetings$organiser == "", "Not specified", meetings$organiser),
-        "<br><strong>Room:</strong> ", meetings$room_name
+        "</div>",
+        "<div style='font-size: 13px; color: #5f6368;'>",
+        "<span style='margin-right: 6px;'>📍</span>",
+        meetings$room_name,
+        "</div>",
+        "</div>"
       ),
       start = sapply(meetings$start_datetime, format_for_calendar),
       end = sapply(meetings$end_datetime, format_for_calendar),
       location = ifelse(is.na(meetings$organiser), "", meetings$organiser),
-      category = "time",  # This makes it display as a time block (not all-day)
-      isAllday = FALSE,   # Explicitly set to false for time blocks
+      category = "time",
+      isAllday = FALSE,
       stringsAsFactors = FALSE
     )
   })

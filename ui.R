@@ -214,21 +214,35 @@ ui <- page_navbar(
            ======================================== */
         
         .toastui-calendar-event-time {
-          border-radius: 4px !important;
-          opacity: 0.9 !important;
-          border-left: 4px solid rgba(0,0,0,0.15) !important;
+          border-radius: 6px !important;
+          opacity: 0.95 !important;
+          border-left: 4px solid rgba(0,0,0,0.2) !important;
+          box-shadow: 0 1px 3px rgba(0,0,0,0.12) !important;
+          overflow: hidden !important;
         }
         
         .toastui-calendar-event-time:hover {
           opacity: 1 !important;
-          box-shadow: 0 2px 6px rgba(0,0,0,0.2) !important;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.25) !important;
+          transform: scale(1.01);
+          z-index: 10 !important;
         }
         
         .toastui-calendar-event-time-content {
           font-weight: 500 !important;
-          font-size: 12px !important;
-          padding: 4px 6px !important;
+          font-size: 11px !important;
+          padding: 6px 8px !important;
           color: white !important;
+          line-height: 1.4 !important;
+          white-space: pre-line !important;
+          overflow: hidden !important;
+          text-overflow: ellipsis !important;
+        }
+        
+        /* Make the event title (subject) stand out */
+        .toastui-calendar-event-time-content::first-line {
+          font-weight: 600 !important;
+          font-size: 12px !important;
         }
         
         /* Current time indicator */
