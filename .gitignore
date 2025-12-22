@@ -47,3 +47,4 @@ renv/sandbox/
 *.swo
 *.tmp
 
+.Rproj.user
