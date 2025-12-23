@@ -8,18 +8,14 @@ library(DT)
 
 # Theme configuration
 theme <- bs_theme(
-    version = 5,
-    bootswatch = "flatly",
-    primary = "#4285F4",
-    "navbar-bg" = "#2C3E50"
+  version = 5,
+  bootswatch = "flatly",
+  primary = "#4285F4",
+  "navbar-bg" = "#2C3E50"
 )
 
 ui <- page_navbar(
-  title = div(
-    style = "display: flex; align-items: center; gap: 12px;",
-    img(src = "www/logo.png", height = "36px", style = "border-radius: 6px;"),
-    span("Meeting Room Scheduler", style = "font-weight: 600; font-size: 18px;")
-  ),
+  title = "Meeting Room Scheduler",
   theme = theme,
   
   # ===== Calendar Tab (Main Dashboard) =====
@@ -27,32 +23,8 @@ ui <- page_navbar(
     "Calendar",
     
     # Custom CSS for Google Calendar-like layout
-  tags$head(
-    tags$style(HTML("
-        /* ========================================
-           Navbar Logo Styling
-           ======================================== */
-        
-        .navbar-brand {
-          display: flex !important;
-          align-items: center !important;
-          padding: 8px 0 !important;
-        }
-        
-        .navbar-brand img {
-          transition: transform 0.2s ease;
-          box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-        }
-        
-        .navbar-brand img:hover {
-          transform: scale(1.05);
-        }
-        
-        .navbar-brand span {
-          color: #fff !important;
-          text-shadow: 0 1px 2px rgba(0,0,0,0.1);
-        }
-        
+    tags$head(
+      tags$style(HTML("
         /* ========================================
            Google Calendar Layout
            ======================================== */
@@ -84,8 +56,8 @@ ui <- page_navbar(
         
         /* Mini calendar styling */
         .mini-calendar {
-        margin-bottom: 20px;
-      }
+          margin-bottom: 20px;
+        }
         
         .mini-calendar .form-control {
           border: none;
@@ -153,14 +125,14 @@ ui <- page_navbar(
         
         .gcal-toolbar-center {
           flex: 1;
-        display: flex;
+          display: flex;
           align-items: center;
           justify-content: center;
-      }
+        }
         
         .gcal-toolbar-right {
           display: flex;
-        align-items: center;
+          align-items: center;
           gap: 8px;
         }
         
@@ -176,7 +148,7 @@ ui <- page_navbar(
           color: #3c4043;
           font-weight: 500;
           padding: 8px 16px;
-        border-radius: 4px;
+          border-radius: 4px;
         }
         
         .btn-today:hover {
@@ -187,7 +159,7 @@ ui <- page_navbar(
           width: 36px;
           height: 36px;
           border-radius: 50%;
-        border: none;
+          border: none;
           background: transparent;
           color: #5f6368;
           display: flex;
@@ -204,7 +176,7 @@ ui <- page_navbar(
           border: 1px solid #dadce0;
           border-radius: 24px;
           padding: 8px 24px 8px 12px;
-        font-weight: 500;
+          font-weight: 500;
           color: #3c4043;
           display: flex;
           align-items: center;
@@ -242,35 +214,21 @@ ui <- page_navbar(
            ======================================== */
         
         .toastui-calendar-event-time {
-          border-radius: 6px !important;
-          opacity: 0.95 !important;
-          border-left: 4px solid rgba(0,0,0,0.2) !important;
-          box-shadow: 0 1px 3px rgba(0,0,0,0.12) !important;
-          overflow: hidden !important;
+          border-radius: 4px !important;
+          opacity: 0.9 !important;
+          border-left: 4px solid rgba(0,0,0,0.15) !important;
         }
         
         .toastui-calendar-event-time:hover {
           opacity: 1 !important;
-          box-shadow: 0 4px 12px rgba(0,0,0,0.25) !important;
-          transform: scale(1.01);
-          z-index: 10 !important;
+          box-shadow: 0 2px 6px rgba(0,0,0,0.2) !important;
         }
         
         .toastui-calendar-event-time-content {
           font-weight: 500 !important;
-          font-size: 11px !important;
-          padding: 6px 8px !important;
-          color: white !important;
-          line-height: 1.4 !important;
-          white-space: pre-line !important;
-          overflow: hidden !important;
-          text-overflow: ellipsis !important;
-        }
-        
-        /* Make the event title (subject) stand out */
-        .toastui-calendar-event-time-content::first-line {
-          font-weight: 600 !important;
           font-size: 12px !important;
+          padding: 4px 6px !important;
+          color: white !important;
         }
         
         /* Current time indicator */
@@ -305,9 +263,9 @@ ui <- page_navbar(
            Weekend (Saturday/Sunday) Styling
            ======================================== */
         
-        /* Shade weekend columns - 7th and 8th columns (Sat, Sun) accounting for time column */
-        .toastui-calendar-column:nth-child(7),
-        .toastui-calendar-column:nth-child(8) {
+        /* Shade weekend columns - last 2 columns (Sat, Sun) */
+        .toastui-calendar-column:nth-last-child(1),
+        .toastui-calendar-column:nth-last-child(2) {
           background: repeating-linear-gradient(
             45deg,
             #e0e0e0,
@@ -317,60 +275,16 @@ ui <- page_navbar(
           ) !important;
         }
         
-        /* Also target the panel columns */
-        .toastui-calendar-panel:nth-child(7),
-        .toastui-calendar-panel:nth-child(8) {
-          background: repeating-linear-gradient(
-            45deg,
-            #e0e0e0,
-            #e0e0e0 8px,
-            #d5d5d5 8px,
-            #d5d5d5 16px
-          ) !important;
-        }
-        
-        /* Shade weekend cells in All Day row */
-        .toastui-calendar-week-view-day-names + div .toastui-calendar-grid-cell:nth-child(6),
-        .toastui-calendar-week-view-day-names + div .toastui-calendar-grid-cell:nth-child(7),
-        .toastui-calendar-allday-grid-cell:nth-child(6),
-        .toastui-calendar-allday-grid-cell:nth-child(7),
-        .toastui-calendar-panel-grid .toastui-calendar-weekday-grid-cell:nth-child(6),
-        .toastui-calendar-panel-grid .toastui-calendar-weekday-grid-cell:nth-child(7),
-        .toastui-calendar-panel-allday-events-cell:nth-child(6),
-        .toastui-calendar-panel-allday-events-cell:nth-child(7) {
-          background: repeating-linear-gradient(
-            45deg,
-            #e0e0e0,
-            #e0e0e0 8px,
-            #d5d5d5 8px,
-            #d5d5d5 16px
-          ) !important;
-        }
-        
-        /* Generic approach - target all weekend cells in any panel/grid */
-        [class*='toastui-calendar-panel'] [class*='cell']:nth-child(6),
-        [class*='toastui-calendar-panel'] [class*='cell']:nth-child(7),
-        [class*='toastui-calendar-allday'] [class*='cell']:nth-child(6),
-        [class*='toastui-calendar-allday'] [class*='cell']:nth-child(7) {
-          background: repeating-linear-gradient(
-            45deg,
-            #e0e0e0,
-            #e0e0e0 8px,
-            #d5d5d5 8px,
-            #d5d5d5 16px
-          ) !important;
-        }
-        
-        /* Weekend day headers - 7th and 8th */
-        .toastui-calendar-day-names .toastui-calendar-day-name:nth-child(7),
-        .toastui-calendar-day-names .toastui-calendar-day-name:nth-child(8) {
+        /* Weekend day headers - last 2 */
+        .toastui-calendar-day-names .toastui-calendar-day-name:nth-last-child(1),
+        .toastui-calendar-day-names .toastui-calendar-day-name:nth-last-child(2) {
           color: #9e9e9e !important;
           background: #f0f0f0 !important;
         }
         
         /* Weekend column overlay for darker shade */
-        .toastui-calendar-column:nth-child(7)::after,
-        .toastui-calendar-column:nth-child(8)::after {
+        .toastui-calendar-column:nth-last-child(1)::after,
+        .toastui-calendar-column:nth-last-child(2)::after {
           content: '';
           position: absolute;
           top: 0;
@@ -443,30 +357,14 @@ ui <- page_navbar(
                 var $columns = $(".toastui-calendar-column");
                 var colIndex = $columns.index($target);
                 
-                // Get week start date from the data attribute set by server
-                var weekStartStr = $(".gcal-week-display").attr("data-week-start");
-                var clickedDate;
+                // Get today and calculate clicked date
+                var today = new Date();
+                var dayOfWeek = today.getDay();
+                var monday = new Date(today);
+                monday.setDate(today.getDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1));
                 
-                if (weekStartStr) {
-                  // Parse the week start date (YYYY-MM-DD format) - avoid timezone issues
-                  var parts = weekStartStr.split("-");
-                  var year = parseInt(parts[0]);
-                  var month = parseInt(parts[1]) - 1;
-                  var day = parseInt(parts[2]) + colIndex;
-                  
-                  // Create date directly with the calculated day
-                  clickedDate = new Date(year, month, day, 12, 0, 0); // Use noon to avoid DST issues
-                  
-                } else {
-                  // Fallback to today-based calculation
-                  var today = new Date();
-                  var dayOfWeek = today.getDay();
-                  var monday = new Date(today);
-                  monday.setDate(today.getDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1));
-                  clickedDate = new Date(monday);
-                  clickedDate.setDate(monday.getDate() + colIndex);
-                  
-                }
+                var clickedDate = new Date(monday);
+                clickedDate.setDate(monday.getDate() + colIndex);
                 
                 // Calculate time from Y position
                 var $gridContainer = $target.find(".toastui-calendar-timegrid-column");
@@ -498,6 +396,7 @@ ui <- page_navbar(
                 var dateStr = clickedDate.getFullYear() + "-" + 
                               ("0" + (clickedDate.getMonth() + 1)).slice(-2) + "-" + 
                               ("0" + clickedDate.getDate()).slice(-2);
+                
                 
                 // Send to Shiny
                 Shiny.setInputValue("calendar_click", {

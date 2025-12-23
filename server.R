@@ -120,7 +120,6 @@ server <- function(input, output, session) {
     
     # Calculate week start and end
     week_start <- current_date - as.integer(format(current_date, "%u")) + 1
-    
     week_end <- week_start + 6
     
     # Format: "December 15-21, 2025"
@@ -138,11 +137,7 @@ server <- function(input, output, session) {
       )
     }
     
-    div(
-      class = "gcal-week-display",
-      `data-week-start` = format(week_start, "%Y-%m-%d"),
-      display_text
-    )
+    div(class = "gcal-week-display", display_text)
   })
   
   # Get meetings formatted for calendar (Google Calendar-like blocks)
@@ -162,47 +157,22 @@ server <- function(input, output, session) {
       format(dt, "%Y-%m-%dT%H:%M:%S")
     }
     
-    # Build display title: "Subject | Organizer" or fallback
-    build_title <- function(subject, organizer) {
-      subj <- if (is.na(subject) || subject == "") NULL else subject
-      org <- if (is.na(organizer) || organizer == "") NULL else organizer
-      
-      if (!is.null(subj) && !is.null(org)) {
-        paste0(subj, "\n👤 ", org)
-      } else if (!is.null(subj)) {
-        subj
-      } else if (!is.null(org)) {
-        paste0("👤 ", org)
-      } else {
-        "Meeting"
-      }
-    }
-    
     # Create schedule data for toastui with proper time blocks
     data.frame(
       id = as.character(meetings$id),
       calendarId = as.character(meetings$room_id),
-      title = mapply(build_title, meetings$meeting_purpose, meetings$organiser, USE.NAMES = FALSE),
+      title = ifelse(is.na(meetings$meeting_purpose) | meetings$meeting_purpose == "",
+                     meetings$room_name, meetings$meeting_purpose),
       body = paste0(
-        "<div style='padding: 8px;'>",
-        "<div style='font-size: 14px; font-weight: 600; margin-bottom: 8px;'>",
-        ifelse(is.na(meetings$meeting_purpose) | meetings$meeting_purpose == "", "Meeting", meetings$meeting_purpose),
-        "</div>",
-        "<div style='font-size: 13px; color: #5f6368; margin-bottom: 4px;'>",
-        "<span style='margin-right: 6px;'>👤</span>",
+        "<strong>Organizer:</strong> ", 
         ifelse(is.na(meetings$organiser) | meetings$organiser == "", "Not specified", meetings$organiser),
-        "</div>",
-        "<div style='font-size: 13px; color: #5f6368;'>",
-        "<span style='margin-right: 6px;'>📍</span>",
-        meetings$room_name,
-        "</div>",
-        "</div>"
+        "<br><strong>Room:</strong> ", meetings$room_name
       ),
       start = sapply(meetings$start_datetime, format_for_calendar),
       end = sapply(meetings$end_datetime, format_for_calendar),
       location = ifelse(is.na(meetings$organiser), "", meetings$organiser),
-      category = "time",
-      isAllday = FALSE,
+      category = "time",  # This makes it display as a time block (not all-day)
+      isAllday = FALSE,   # Explicitly set to false for time blocks
       stringsAsFactors = FALSE
     )
   })
@@ -280,6 +250,7 @@ server <- function(input, output, session) {
   observeEvent(input$calendar_click, {
     event <- input$calendar_click
     if (is.null(event)) return()
+    
     
     # Check if weekend
     if (isTRUE(event$isWeekend)) {
@@ -444,30 +415,11 @@ server <- function(input, output, session) {
     
     # Add meeting
     
-    # Check if room is visible - warn user if not
-    current_visible <- visible_rooms()
-    room_id_str <- as.character(room_id)
-    room_hidden <- !is.null(current_visible) && !(room_id_str %in% current_visible)
-    
     tryCatch({
       add_meeting(room_id, start_dt, end_dt, organizer, subject)
       meetings_trig(meetings_trig() + 1)
       removeModal()
-      
-      # Navigate calendar to the booked meeting's date
-      meeting_date <- as.Date(date)
-      updateDateInput(session, "mini_calendar", value = meeting_date)
-      cal_proxy_date("booking_calendar", meeting_date)
-      
-      if (room_hidden) {
-        showNotification(
-          "Meeting scheduled! Note: This room is currently hidden. Check its box in the sidebar to see the meeting.",
-          type = "warning",
-          duration = 6
-        )
-      } else {
-        showNotification("Meeting scheduled!", type = "message")
-      }
+      showNotification("Meeting scheduled!", type = "message")
     }, error = function(e) {
       showNotification(paste("Error:", e$message), type = "error")
     })
@@ -508,21 +460,13 @@ server <- function(input, output, session) {
     cal_proxy_today("booking_calendar")
   })
   
-  # Previous button - also update mini calendar
+  # Previous button
   observeEvent(input$btn_prev, {
-    current <- input$mini_calendar
-    if (is.null(current)) current <- Sys.Date()
-    new_date <- current - 7
-    updateDateInput(session, "mini_calendar", value = new_date)
     cal_proxy_prev("booking_calendar")
   })
   
-  # Next button - also update mini calendar
+  # Next button
   observeEvent(input$btn_next, {
-    current <- input$mini_calendar
-    if (is.null(current)) current <- Sys.Date()
-    new_date <- current + 7
-    updateDateInput(session, "mini_calendar", value = new_date)
     cal_proxy_next("booking_calendar")
   })
   
