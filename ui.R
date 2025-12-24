@@ -88,11 +88,11 @@ ui <- page_navbar(
   ),
   
   # ---------------------------------------------------------------------------
-  # Tab: Room Calendar
+  # Tab: Book Meeting Room
   # ---------------------------------------------------------------------------
   
   nav_panel(
-    "Room Calendar",
+    "Book Meeting Room",
     
     # Click handler for calendar time grid
     tags$head(
@@ -219,11 +219,11 @@ ui <- page_navbar(
   ),
   
   # ---------------------------------------------------------------------------
-  # Tab: Car Calendar
+  # Tab: Book Car
   # ---------------------------------------------------------------------------
   
   nav_panel(
-    "Car Calendar",
+    "Book Car",
     value = "car_calendar_tab",
     
     # Click handler for car calendar time grid
@@ -231,7 +231,7 @@ ui <- page_navbar(
       tags$script(HTML('
         $(document).ready(function() {
           $(document).on("shown.bs.tab", function(e) {
-            if (e.target && e.target.textContent && e.target.textContent.includes("Car Calendar")) {
+            if (e.target && e.target.textContent && e.target.textContent.includes("Book Car")) {
               setTimeout(function() {
                 $(window).trigger("resize");
               }, 100);

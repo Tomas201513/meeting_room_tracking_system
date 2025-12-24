@@ -662,7 +662,7 @@ server <- function(input, output, session) {
         textInput("room_name", "Room name:", placeholder = "e.g. Board Room"),
         numericInput("accomodate", "Capacity:", value = 10, min = 1, max = 1000),
         textAreaInput("room_desc", "Description:", placeholder = "Optional notes", resize = "vertical"),
-        colourInput("room_color", "Color:", value = "#4285F4", 
+        colourpicker::colourInput("room_color", "Color:", value = "#4285F4", 
                     palette = "limited",
                     allowedCols = c("#4285F4", "#0F9D58", "#DB4437", "#F4B400", "#AB47BC", 
                                    "#00ACC1", "#FF7043", "#5C6BC0", "#26A69A", "#EC407A")),
@@ -767,7 +767,7 @@ server <- function(input, output, session) {
       updateTextInput(session, "room_name", value = "")
       updateNumericInput(session, "accomodate", value = 10)
       updateTextAreaInput(session, "room_desc", value = "")
-      updateColourInput(session, "room_color", value = "#4285F4")
+      colourpicker::updateColourInput(session, "room_color", value = "#4285F4")
       updateCheckboxInput(session, "room_status", value = TRUE)
       rooms_trig(rooms_trig() + 1)
       showNotification("Room added!", type = "message")
@@ -829,7 +829,7 @@ server <- function(input, output, session) {
         textInput("car_plate_no", "Plate number:", placeholder = "e.g. ABC-1234"),
         numericInput("car_accomodate", "Capacity:", value = 4, min = 1, max = 50),
         textAreaInput("car_desc", "Description:", placeholder = "Optional notes", resize = "vertical"),
-        colourInput("car_color", "Color:", value = "#0F9D58", 
+        colourpicker::colourInput("car_color", "Color:", value = "#0F9D58", 
                     palette = "limited",
                     allowedCols = c("#4285F4", "#0F9D58", "#DB4437", "#F4B400", "#AB47BC", 
                                    "#00ACC1", "#FF7043", "#5C6BC0", "#26A69A", "#EC407A")),
@@ -948,7 +948,7 @@ server <- function(input, output, session) {
       updateTextInput(session, "car_plate_no", value = "")
       updateNumericInput(session, "car_accomodate", value = 4)
       updateTextAreaInput(session, "car_desc", value = "")
-      updateColourInput(session, "car_color", value = "#0F9D58")
+      colourpicker::updateColourInput(session, "car_color", value = "#0F9D58")
       updateCheckboxInput(session, "car_status", value = TRUE)
       cars_trig(cars_trig() + 1)
       showNotification("Car added!", type = "message")
