@@ -1037,12 +1037,22 @@ server <- function(input, output, session) {
       return()
     }
     
+    cars <- cars_with_colors()
+    active_cars <- subset(cars, status == 1)
+    
+    # Check if there are any active cars available
+    if (nrow(active_cars) == 0 || !("car_plate_no" %in% names(active_cars))) {
+      showNotification(
+        "No cars available for booking. Please contact an administrator to add cars.",
+        type = "warning",
+        duration = 5
+      )
+      return()
+    }
+    
     clicked_car_datetime$date <- event$date
     clicked_car_datetime$start_time <- event$startTime
     clicked_car_datetime$end_time <- event$endTime
-    
-    cars <- cars_with_colors()
-    active_cars <- subset(cars, status == 1)
     
     car_choices <- setNames(
       active_cars$car_plate_no,
