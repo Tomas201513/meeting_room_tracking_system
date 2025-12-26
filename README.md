@@ -8,6 +8,7 @@ A Shiny web application for booking meeting rooms and vehicles. Built with a cle
 - See availability at a glance with color-coded events
 - Prevent double-bookings automatically
 - Manage resources through an admin panel
+- Department-based authentication with role-based permissions
 
 ## Quick Start
 
@@ -21,16 +22,29 @@ source("install_packages.R")
 shiny::runApp()
 ```
 
-3. Log in with the default credentials:
+3. Log in with the default admin credentials:
 
-| Role  | Username | Password |
-|-------|----------|----------|
-| Admin | admin    | admin    |
-| User  | user     | user     |
+| Role  | Department Name | Password  |
+|-------|-----------------|-----------|
+| Admin | Admin           | admin123  |
+
+## Permission System
+
+Each department can have separate permissions for rooms and cars:
+
+| Permission | Can View | Can Create | Edit/Delete Own | Edit/Delete Others |
+|------------|----------|------------|-----------------|-------------------|
+| Read       | Yes      | No         | No              | No                |
+| Create     | Yes      | Yes        | Yes             | No                |
+| Admin      | Yes      | Yes        | Yes             | Yes               |
+
+- **Read**: Can only view existing bookings
+- **Create**: Can create bookings and manage their own bookings (edit/delete)
+- **Admin**: Full control over all bookings and can manage departments
 
 ## How to use
 
-**Booking a room or car:**
+**Booking a room or car (requires Create permission):**
 - Click on any time slot in the calendar
 - Fill in the details in the popup form
 - Click Save
@@ -44,6 +58,12 @@ shiny::runApp()
 - Go to "Manage Rooms" or "Manage Cars" tab
 - Add new resources with the form on the left
 - Delete resources from the table
+
+**Managing departments (admin only):**
+- Go to "Manage Departments" tab
+- Create new department accounts with name and password
+- Set room and car permissions (Read or Create)
+- Share credentials with departments after creation
 
 ## Project Files
 
@@ -62,9 +82,12 @@ scheduler.db    - SQLite database (created on first run)
 - toastui for the calendar component
 - RSQLite for data persistence
 - shinymanager for authentication
+- sodium for secure password hashing
 
 ## Notes
 
 - Working hours are set to 8 AM - 5 PM, Monday through Friday
 - The database file (`scheduler.db`) is created automatically on first run
-- Change the default credentials in `global.R` for production use
+- Passwords are securely hashed using the sodium library
+- Default admin account is created on first run (Admin / admin123)
+- Delete the `scheduler.db` file to reset the database

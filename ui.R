@@ -13,7 +13,7 @@ theme <- bs_theme(
   "navbar-bg" = "#2C3E50"
 )
 
-ui <- secure_app(page_navbar(
+ui <- page_navbar(
   title = "Resource Scheduler",
   theme = theme,
   
@@ -269,21 +269,21 @@ ui <- secure_app(page_navbar(
                 if ($gridContainer.length === 0) $gridContainer = $target;
                 
                 var offset = e.offsetY || 0;
-                var containerHeight = $gridContainer.height() || 540;
-                var hoursDisplayed = 9;
-                var startHour = 8;
+                var containerHeight = $gridContainer.height() || 1200;
+                var hoursDisplayed = 24;
+                var startHour = 0;
                 
                 var clickedHour = startHour + (offset / containerHeight) * hoursDisplayed;
                 var hour = Math.floor(clickedHour);
                 var minutes = Math.round((clickedHour - hour) * 60 / 30) * 30;
                 if (minutes >= 60) { hour++; minutes = 0; }
                 
-                if (hour < 8) hour = 8;
-                if (hour > 16) hour = 16;
+                if (hour < 0) hour = 0;
+                if (hour > 23) hour = 23;
                 
                 var startTime = ("0" + hour).slice(-2) + ":" + ("0" + minutes).slice(-2);
                 var endHour = hour + 1;
-                if (endHour > 17) endHour = 17;
+                if (endHour > 24) endHour = 24;
                 var endTime = ("0" + endHour).slice(-2) + ":" + ("0" + minutes).slice(-2);
                 
                 var dateStr = clickedDate.getFullYear() + "-" + 
@@ -374,6 +374,15 @@ ui <- secure_app(page_navbar(
     "Manage Cars",
     value = "cars_tab",
     uiOutput("cars_admin_ui")
+  ),
+  
+  # ---------------------------------------------------------------------------
+  # Tab: Manage Departments (Admin)
+  # ---------------------------------------------------------------------------
+  
+  nav_panel(
+    "Manage Departments",
+    value = "depts_tab",
+    uiOutput("depts_admin_ui")
   )
-)
 )

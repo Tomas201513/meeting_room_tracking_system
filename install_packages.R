@@ -9,7 +9,8 @@ required_packages <- c(
   "shinyWidgets",
   "shinymanager",
   "colourpicker",
-  "shinyjs"
+  "shinyjs",
+  "sodium"
 )
 
 # Installs package if not already available
@@ -26,6 +27,6 @@ invisible(lapply(required_packages, install_if_missing))
 
 message("\nAll packages installed.")
 message("Run the app with: shiny::runApp()")
-message("\nDefault credentials:")
-message("  Admin: admin / admin")
-message("  User:  user / user")
+message("\nDefault admin credentials:")
+message("  Department: Admin")
+message("  Password:   admin123")

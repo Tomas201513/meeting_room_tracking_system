@@ -15,13 +15,51 @@ server <- function(input, output, session) {
   # ---------------------------------------------------------------------------
   
   res_auth <- secure_server(
-    check_credentials = check_credentials(credentials)
+    check_credentials = check_credentials_db()
   )
   
-  # Returns TRUE if current user has admin privileges
+  # Returns TRUE if current department has admin privileges
   is_admin <- reactive({
     auth <- reactiveValuesToList(res_auth)
     isTRUE(auth$admin)
+  })
+  
+  # Get current department ID
+  current_dept_id <- reactive({
+    auth <- reactiveValuesToList(res_auth)
+    auth$dept_id
+  })
+  
+  # Get current department name
+  current_dept_name <- reactive({
+    auth <- reactiveValuesToList(res_auth)
+    auth$user
+  })
+  
+  # Get room permission for current department
+  room_permission <- reactive({
+    auth <- reactiveValuesToList(res_auth)
+    if (isTRUE(auth$admin)) return("admin")
+    auth$room_permission %||% "read"
+  })
+  
+  # Get car permission for current department
+  car_permission <- reactive({
+    auth <- reactiveValuesToList(res_auth)
+    if (isTRUE(auth$admin)) return("admin")
+    auth$car_permission %||% "read"
+  })
+  
+  # Check if department can create room bookings
+  can_create_room <- reactive({
+    perm <- room_permission()
+    perm %in% c("create", "admin")
+  })
+  
+  # Check if department can create car bookings
+  can_create_car <- reactive({
+    perm <- car_permission()
+    perm %in% c("create", "admin")
   })
   
   # Hide admin-only tabs for regular users
@@ -30,11 +68,13 @@ server <- function(input, output, session) {
       shinyjs::runjs('
         $(".navbar-nav .nav-item a:contains(\\"Manage Rooms\\")").parent().hide();
         $(".navbar-nav .nav-item a:contains(\\"Manage Cars\\")").parent().hide();
+        $(".navbar-nav .nav-item a:contains(\\"Manage Departments\\")").parent().hide();
       ')
     } else {
       shinyjs::runjs('
         $(".navbar-nav .nav-item a:contains(\\"Manage Rooms\\")").parent().show();
         $(".navbar-nav .nav-item a:contains(\\"Manage Cars\\")").parent().show();
+        $(".navbar-nav .nav-item a:contains(\\"Manage Departments\\")").parent().show();
       ')
     }
   })
@@ -47,6 +87,7 @@ server <- function(input, output, session) {
   meetings_trig <- reactiveVal(0)
   cars_trig <- reactiveVal(0)
   car_bookings_trig <- reactiveVal(0)
+  depts_trig <- reactiveVal(0)
   
   # ---------------------------------------------------------------------------
   # Data: Rooms & Cars with Colors
@@ -259,6 +300,13 @@ server <- function(input, output, session) {
       format(dt, "%Y-%m-%dT%H:%M:%S")
     }
     
+    # Add department info to body
+    dept_info <- ifelse(
+      is.na(meetings$creator_dept_name) | meetings$creator_dept_name == "",
+      "",
+      paste0("<br><strong>Booked by:</strong> ", meetings$creator_dept_name)
+    )
+    
     data.frame(
       id = as.character(meetings$id),
       calendarId = as.character(meetings$room_id),
@@ -267,13 +315,15 @@ server <- function(input, output, session) {
       body = paste0(
         "<strong>Organizer:</strong> ", 
         ifelse(is.na(meetings$organiser) | meetings$organiser == "", "Not specified", meetings$organiser),
-        "<br><strong>Room:</strong> ", meetings$room_name
+        "<br><strong>Room:</strong> ", meetings$room_name,
+        dept_info
       ),
       start = sapply(meetings$start_datetime, format_for_calendar),
       end = sapply(meetings$end_datetime, format_for_calendar),
       location = ifelse(is.na(meetings$organiser), "", meetings$organiser),
       category = "time",
       isAllday = FALSE,
+      created_by_dept = meetings$created_by_dept,
       stringsAsFactors = FALSE
     )
   })
@@ -296,6 +346,13 @@ server <- function(input, output, session) {
       format(as.POSIXct(x, tz = "UTC"), "%Y-%m-%dT%H:%M:%S")
     }
     
+    # Add department info
+    dept_info <- ifelse(
+      is.na(bookings$creator_dept_name) | bookings$creator_dept_name == "",
+      "",
+      paste0("<br><strong>Booked by:</strong> ", bookings$creator_dept_name)
+    )
+    
     schedules_df <- data.frame(
       id = as.character(bookings$id),
       calendarId = bookings$car_plate_no,
@@ -308,13 +365,15 @@ server <- function(input, output, session) {
         "<br><strong>Pickup:</strong> ", bookings$pickup_location,
         "<br><strong>Drop-off:</strong> ", bookings$dropoff_location,
         ifelse(is.na(bookings$comments) | bookings$comments == "", "", 
-               paste0("<br><strong>Notes:</strong> ", bookings$comments))
+               paste0("<br><strong>Notes:</strong> ", bookings$comments)),
+        dept_info
       ),
       location = bookings$passanger_name,
       start = sapply(bookings$start_datetime, to_iso),
       end = sapply(bookings$end_datetime, to_iso),
       category = "time",
       isAllday = FALSE,
+      created_by_dept = bookings$created_by_dept,
       stringsAsFactors = FALSE
     )
     
@@ -329,12 +388,13 @@ server <- function(input, output, session) {
     rooms <- rooms_with_colors()
     schedules <- calendar_schedules()
     vis_rooms <- visible_rooms()
+    can_create <- can_create_room()
     
     cal <- calendar(
       defaultView = "week",
       useDetailPopup = TRUE,
       useCreationPopup = FALSE,
-      isReadOnly = FALSE,
+      isReadOnly = !can_create,
       view = "week"
     )
     
@@ -359,7 +419,9 @@ server <- function(input, output, session) {
     }
     
     if (nrow(schedules) > 0) {
-      cal <- cal %>% cal_schedules(schedules)
+      # Remove created_by_dept before sending to calendar
+      schedules_display <- schedules[, !names(schedules) %in% c("created_by_dept")]
+      cal <- cal %>% cal_schedules(schedules_display)
     }
     
     cal <- cal %>% cal_week_options(
@@ -384,12 +446,13 @@ server <- function(input, output, session) {
     cars <- cars_with_colors()
     schedules <- car_calendar_schedules()
     vis <- visible_cars()
+    can_create <- can_create_car()
     
     cal <- calendar(
       defaultView = "week",
       useDetailPopup = TRUE,
       useCreationPopup = FALSE,
-      isReadOnly = FALSE,
+      isReadOnly = !can_create,
       view = "week"
     )
     
@@ -408,18 +471,20 @@ server <- function(input, output, session) {
     }
     
     if (nrow(schedules) > 0) {
-      cal <- cal %>% cal_schedules(schedules)
+      # Remove created_by_dept before sending to calendar
+      schedules_display <- schedules[, !names(schedules) %in% c("created_by_dept")]
+      cal <- cal %>% cal_schedules(schedules_display)
     }
     
     cal %>% cal_week_options(
       startDayOfWeek = 1,
-      hourStart = 8,
-      hourEnd = 17,
+      hourStart = 0,
+      hourEnd = 24,
       showNowIndicator = TRUE,
       eventView = "time",
       taskView = FALSE,
       narrowWeekend = FALSE,
-      workweek = TRUE
+      workweek = FALSE
     )
   })
   
@@ -463,6 +528,16 @@ server <- function(input, output, session) {
   observeEvent(input$calendar_click, {
     event <- input$calendar_click
     if (is.null(event)) return()
+    
+    # Check permission
+    if (!can_create_room()) {
+      showNotification(
+        "You don't have permission to create room bookings. Contact an administrator.",
+        type = "warning",
+        duration = 4
+      )
+      return()
+    }
     
     if (isTRUE(event$isWeekend)) {
       showNotification(
@@ -563,6 +638,13 @@ server <- function(input, output, session) {
   
   # Validates and saves the new meeting
   observeEvent(input$modal_save_meeting, {
+    # Check permission again
+    if (!can_create_room()) {
+      showNotification("You don't have permission to create room bookings.", type = "error")
+      removeModal()
+      return()
+    }
+    
     room_id <- as.integer(input$modal_room)
     subject <- input$modal_subject
     organizer <- input$modal_organizer
@@ -607,7 +689,7 @@ server <- function(input, output, session) {
     }
     
     tryCatch({
-      add_meeting(room_id, start_dt, end_dt, organizer, subject)
+      add_meeting(room_id, start_dt, end_dt, organizer, subject, created_by_dept = current_dept_id())
       meetings_trig(meetings_trig() + 1)
       removeModal()
       showNotification("Meeting scheduled!", type = "message")
@@ -623,8 +705,16 @@ server <- function(input, output, session) {
   observeEvent(input$booking_calendar_delete, {
     event <- input$booking_calendar_delete
     if (!is.null(event$id)) {
+      meeting_id <- as.integer(event$id)
+      
+      # Check permission
+      if (!can_modify_meeting(meeting_id, current_dept_id(), is_admin())) {
+        showNotification("You can only delete your own bookings.", type = "error")
+        return()
+      }
+      
       tryCatch({
-        delete_meeting(as.integer(event$id))
+        delete_meeting(meeting_id)
         meetings_trig(meetings_trig() + 1)
         showNotification("Meeting deleted.", type = "message")
       }, error = function(e) {
@@ -1029,10 +1119,12 @@ server <- function(input, output, session) {
     event <- input$car_calendar_click
     if (is.null(event)) return()
     
-    if (isTRUE(event$isWeekend)) {
+    # Check permission
+    if (!can_create_car()) {
       showNotification(
-        "Weekends are not available for car booking.",
-        type = "warning"
+        "You don't have permission to create car bookings. Contact an administrator.",
+        type = "warning",
+        duration = 4
       )
       return()
     }
@@ -1059,6 +1151,9 @@ server <- function(input, output, session) {
       paste(active_cars$car_name, "-", active_cars$car_plate_no)
     )
     
+    # Pre-fill department with logged-in department name
+    dept_name <- current_dept_name()
+    
     showModal(modalDialog(
       title = paste(
         "New Car Booking -",
@@ -1069,7 +1164,7 @@ server <- function(input, output, session) {
                   choices = car_choices, width = "100%"),
       
       textInput("modal_passenger", "Passenger name:", width = "100%"),
-      textInput("modal_department", "Department:", width = "100%"),
+      textInput("modal_department", "Department:", value = dept_name, width = "100%"),
       textInput("modal_trip_purpose", "Trip purpose:", width = "100%"),
       
       numericInput("modal_passengers_no", "Number of passengers:",
@@ -1081,8 +1176,8 @@ server <- function(input, output, session) {
                  "modal_car_start_time",
                  "Start time:",
                  choices = sprintf("%02d:%02d",
-                                   rep(8:16, each = 2),
-                                   rep(c(0, 30), 9)),
+                                   rep(0:23, each = 2),
+                                   rep(c(0, 30), 24)),
                  selected = clicked_car_datetime$start_time
                )
         ),
@@ -1090,9 +1185,10 @@ server <- function(input, output, session) {
                selectInput(
                  "modal_car_end_time",
                  "End time:",
-                 choices = sprintf("%02d:%02d",
-                                   rep(8:17, each = 2),
-                                   rep(c(0, 30), 10)),
+                 choices = c(
+                   sprintf("%02d:%02d", rep(0:23, each = 2), rep(c(0, 30), 24)),
+                   "24:00"
+                 ),
                  selected = clicked_car_datetime$end_time
                )
         )
@@ -1120,6 +1216,13 @@ server <- function(input, output, session) {
   # Validates and saves the new car booking
   observeEvent(input$save_car_booking, {
     req(clicked_car_datetime$date)
+    
+    # Check permission again
+    if (!can_create_car()) {
+      showNotification("You don't have permission to create car bookings.", type = "error")
+      removeModal()
+      return()
+    }
     
     start_dt <- paste(clicked_car_datetime$date,
                       input$modal_car_start_time)
@@ -1153,7 +1256,8 @@ server <- function(input, output, session) {
         no_of_passangers = input$modal_passengers_no,
         pickup_location = input$modal_pickup,
         dropoff_location = input$modal_dropoff,
-        comments = input$modal_car_comment
+        comments = input$modal_car_comment,
+        created_by_dept = current_dept_id()
       )
       
       car_bookings_trig(car_bookings_trig() + 1)
@@ -1179,8 +1283,16 @@ server <- function(input, output, session) {
     event <- input$car_calendar_delete
     if (is.null(event$id)) return()
     
+    booking_id <- as.integer(event$id)
+    
+    # Check permission
+    if (!can_modify_car_booking(booking_id, current_dept_id(), is_admin())) {
+      showNotification("You can only delete your own bookings.", type = "error")
+      return()
+    }
+    
     tryCatch({
-      delete_car_schedule(as.integer(event$id))
+      delete_car_schedule(booking_id)
       car_bookings_trig(car_bookings_trig() + 1)
       showNotification("Car booking deleted.", type = "message")
     }, error = function(e) {
@@ -1208,6 +1320,204 @@ server <- function(input, output, session) {
     car_bookings_trig(car_bookings_trig() + 1)
     cars_trig(cars_trig() + 1)
     showNotification("Car calendar refreshed.", type = "message")
+  })
+  
+  # ---------------------------------------------------------------------------
+  # Department Admin: UI
+  # ---------------------------------------------------------------------------
+  
+  output$depts_admin_ui <- renderUI({
+    if (!is_admin()) {
+      return(
+        div(class = "alert alert-warning mt-4",
+            icon("lock"),
+            " This section is only accessible to administrators.",
+            br(), br(),
+            "Please contact an admin if you need to manage departments."
+        )
+      )
+    }
+    
+    layout_sidebar(
+      sidebar = sidebar(
+        h4("Add New Department"),
+        textInput("dept_name", "Department Name:", placeholder = "e.g. Finance"),
+        passwordInput("dept_password", "Password:", placeholder = "Enter password"),
+        hr(),
+        h5("Permissions"),
+        selectInput("dept_room_perm", "Room Booking:", 
+                    choices = c("Read Only" = "read", "Can Create" = "create"),
+                    selected = "read", width = "100%"),
+        selectInput("dept_car_perm", "Car Booking:", 
+                    choices = c("Read Only" = "read", "Can Create" = "create"),
+                    selected = "read", width = "100%"),
+        checkboxInput("dept_is_admin", "Administrator?", value = FALSE),
+        checkboxInput("dept_status", "Active?", value = TRUE),
+        br(),
+        actionButton("add_dept_btn", "Add Department", class = "btn-primary", width = "100%"),
+        br(), br(),
+        actionButton("depts_refresh_btn", "Refresh", class = "btn-secondary", width = "100%")
+      ),
+      card(
+        card_header("Existing Departments"),
+        card_body(
+          div(
+            style = "margin-bottom: 10px; color: #5f6368; font-size: 13px;",
+            icon("info-circle"),
+            " Share credentials with departments after creation. Passwords are securely hashed."
+          ),
+          DTOutput("depts_table")
+        )
+      ),
+      tags$script(HTML("
+        $(document).on('click', '.delete-dept-btn', function() {
+          var did = $(this).attr('data-id');
+          var dname = $(this).attr('data-name');
+          if (confirm('Delete department \"' + dname + '\"? This cannot be undone.')) {
+            Shiny.setInputValue('delete_dept_id', did, {priority: 'event'});
+          }
+        });
+      "))
+    )
+  })
+  
+  # ---------------------------------------------------------------------------
+  # Department Admin: Table Data
+  # ---------------------------------------------------------------------------
+  
+  depts_data <- reactive({
+    depts_trig()
+    df <- get_departments()
+    if (nrow(df) == 0) return(df)
+    
+    # Don't show password hash
+    df$Delete <- sprintf(
+      '<button class="btn btn-danger btn-sm delete-dept-btn" data-id="%s" data-name="%s">Delete</button>',
+      df$id, htmltools::htmlEscape(df$department_name)
+    )
+    
+    df$Role <- ifelse(df$is_admin == 1, 
+                      '<span class="badge bg-danger">Admin</span>',
+                      '<span class="badge bg-secondary">Department</span>')
+    
+    df$RoomPerm <- ifelse(df$room_permission == "create",
+                          '<span class="badge bg-success">Create</span>',
+                          '<span class="badge bg-info">Read</span>')
+    
+    df$CarPerm <- ifelse(df$car_permission == "create",
+                         '<span class="badge bg-success">Create</span>',
+                         '<span class="badge bg-info">Read</span>')
+    
+    df$Status <- ifelse(df$status == 1, 
+                        '<span class="badge bg-success">Active</span>',
+                        '<span class="badge bg-warning">Inactive</span>')
+    
+    df[, c("Delete", "department_name", "Role", "RoomPerm", "CarPerm", "Status")]
+  })
+  
+  output$depts_table <- renderDT({
+    if (!is_admin()) return(NULL)
+    
+    if (is.null(depts_data()) || nrow(depts_data()) == 0) {
+      return(DT::datatable(
+        data.frame(Message = "No departments yet. Add one from the left."),
+        options = list(dom = 't', ordering = FALSE),
+        rownames = FALSE
+      ))
+    }
+    DT::datatable(
+      depts_data(),
+      escape = FALSE,
+      options = list(
+        pageLength = 10,
+        dom = 'tip',
+        columnDefs = list(
+          list(orderable = FALSE, targets = 0),
+          list(width = '80px', targets = 0)
+        )
+      ),
+      rownames = FALSE,
+      colnames = c("Action", "Department", "Role", "Room Access", "Car Access", "Status")
+    )
+  })
+  
+  # ---------------------------------------------------------------------------
+  # Department Admin: Add & Delete
+  # ---------------------------------------------------------------------------
+  
+  observeEvent(input$add_dept_btn, {
+    if (!is_admin()) {
+      showNotification("Only admins can add departments.", type = "error")
+      return()
+    }
+    
+    dn <- trimws(input$dept_name %||% "")
+    if (dn == "") {
+      showNotification("Please provide a department name.", type = "error")
+      return()
+    }
+    
+    pw <- input$dept_password %||% ""
+    if (nchar(pw) < 4) {
+      showNotification("Password must be at least 4 characters.", type = "error")
+      return()
+    }
+    
+    room_perm <- input$dept_room_perm %||% "read"
+    car_perm <- input$dept_car_perm %||% "read"
+    is_adm <- isTRUE(input$dept_is_admin)
+    st <- isTRUE(input$dept_status)
+    
+    tryCatch({
+      add_department(dn, pw, is_adm, room_perm, car_perm, st)
+      
+      updateTextInput(session, "dept_name", value = "")
+      updateTextInput(session, "dept_password", value = "")
+      updateSelectInput(session, "dept_room_perm", selected = "read")
+      updateSelectInput(session, "dept_car_perm", selected = "read")
+      updateCheckboxInput(session, "dept_is_admin", value = FALSE)
+      updateCheckboxInput(session, "dept_status", value = TRUE)
+      
+      depts_trig(depts_trig() + 1)
+      showNotification(paste("Department '", dn, "' added! Share credentials with the department."), type = "message")
+    }, error = function(e) {
+      msg <- e$message
+      if (grepl("UNIQUE constraint failed", msg, fixed = TRUE)) {
+        showNotification("Department name already exists.", type = "error")
+      } else {
+        showNotification(paste("Error:", msg), type = "error")
+      }
+    })
+  })
+  
+  observeEvent(input$depts_refresh_btn, {
+    depts_trig(depts_trig() + 1)
+    showNotification("Departments refreshed.", type = "message")
+  })
+  
+  observeEvent(input$delete_dept_id, {
+    if (!is_admin()) {
+      showNotification("Only admins can delete departments.", type = "error")
+      return()
+    }
+    
+    did <- suppressWarnings(as.numeric(input$delete_dept_id))
+    
+    # Prevent deleting own account
+    if (!is.na(did) && did == current_dept_id()) {
+      showNotification("You cannot delete your own account.", type = "error")
+      return()
+    }
+    
+    if (!is.na(did)) {
+      tryCatch({
+        delete_department(did)
+        depts_trig(depts_trig() + 1)
+        showNotification("Department deleted.", type = "message")
+      }, error = function(e) {
+        showNotification(paste("Error:", e$message), type = "error")
+      })
+    }
   })
   
 }
